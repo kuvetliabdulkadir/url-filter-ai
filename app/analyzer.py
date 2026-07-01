@@ -15,6 +15,8 @@ load_dotenv()
 CACHE_TTL_HOURS = int(os.getenv("CACHE_TTL_HOURS", "24"))
 
 
+
+
 def analyze_url(url: str, db: Session) -> dict:
     """
     ana akis fonksiyonu - url alir, tum adimlari sirayla isletir, sonuc doner.
@@ -32,10 +34,21 @@ def analyze_url(url: str, db: Session) -> dict:
     """
 
     # ---- 1. url temizle ve domain cikar ----
+        
     # sondaki / ekle ki ayni sayfa farkli url gibi gorunmesin
     if not url.endswith("/"):
         url = url + "/"
     domain = extract_domain(url)
+
+    # cache kontrol
+    existing = db.query(URLAnalysis).filter(URLAnalysis.url == url).first()
+    if existing:
+        cache_deadline = datetime.utcnow() - timedelta(hours=CACHE_TTL_HOURS)
+        if existing.analyzed_at and existing.analyzed_at > cache_deadline:
+            existing.hit_count += 1
+            db.commit()
+            db.refresh(existing)
+            return _to_response(existing, cached=True)
 
     # ---- 2. dns kontrol ----
     # domain dns'te yoksa devam etmeye gerek yok
