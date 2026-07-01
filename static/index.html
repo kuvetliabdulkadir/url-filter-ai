@@ -1,2 +1,699 @@
-<h1>URL Filter AI</h1>
-<p>Sistem calisiyor.</p>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Guard | AI Threat Intelligence</title>
+
+    <!-- guvenlik: xss, clickjacking, mime sniffing korumalari -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="no-referrer">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-base: #030712;
+            --bg-panel: rgba(17, 24, 39, 0.7);
+            --border-light: rgba(255, 255, 255, 0.08);
+            --border-focus: #38bdf8;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --safe: #34d399;
+            --safe-bg: rgba(16, 185, 129, 0.1);
+            --warn: #fbbf24;
+            --warn-bg: rgba(245, 158, 11, 0.1);
+            --danger: #f87171;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.04), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.04), transparent 25%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 20px 80px;
+            line-height: 1.5;
+        }
+
+        .container { width: 100%; max-width: 900px; }
+
+        .glass-panel {
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* baslik */
+        header { text-align: center; margin-bottom: 48px; }
+        h1 {
+            font-size: 2.6rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: var(--text-muted); font-size: 1rem; }
+
+        /* istatistikler */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            padding: 18px;
+            text-align: center;
+        }
+        .stat-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .stat-lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 2px;
+        }
+
+        /* arama */
+        .search-box {
+            display: flex;
+            padding: 8px;
+            gap: 10px;
+            margin-bottom: 36px;
+            transition: var(--transition);
+        }
+        .search-box:focus-within {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+        .search-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.05rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 14px 18px;
+            outline: none;
+        }
+        .search-box input::placeholder { color: #4b5563; font-family: 'Inter', sans-serif; }
+        .search-box button {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 0 32px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+            white-space: nowrap;
+        }
+        .search-box button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+        }
+        .search-box button:disabled {
+            opacity: 0.4;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* yukleniyor */
+        .loading { display: none; text-align: center; padding: 56px 0; }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            border-right-color: var(--primary);
+            border-radius: 50%;
+            margin: 0 auto 18px;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-msg {
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        /* hata */
+        .error-box {
+            display: none;
+            background: var(--danger-bg);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 10px;
+            padding: 14px 20px;
+            color: var(--danger);
+            font-size: 0.88rem;
+            margin-bottom: 20px;
+        }
+
+        /* sonuc karti */
+        .result-card { display: none; overflow: hidden; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: none; }
+        }
+        .result-header {
+            padding: 26px 28px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .result-url {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: #d1d5db;
+            word-break: break-all;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .badge-BLOCK { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+        .badge-BLOCK .dot { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+        .badge-WARN { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(245,158,11,0.3); }
+        .badge-WARN .dot { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+        .badge-ALLOW { background: var(--safe-bg); color: var(--safe); border: 1px solid rgba(16,185,129,0.3); }
+        .badge-ALLOW .dot { background: var(--safe); box-shadow: 0 0 8px var(--safe); }
+
+        /* metrik grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border-light);
+        }
+        .metric {
+            background: var(--bg-panel);
+            padding: 22px 28px;
+        }
+        .metric.full { grid-column: 1 / -1; }
+        .metric-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .metric-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        /* kategori chip */
+        .cat-chip {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-light);
+        }
+        .cat-gambling, .cat-adult { border-color: rgba(239,68,68,0.3); color: var(--danger); }
+        .cat-social { border-color: rgba(245,158,11,0.3); color: var(--warn); }
+        .cat-safe { border-color: rgba(16,185,129,0.3); color: var(--safe); }
+        .cat-unknown { border-color: rgba(156,163,175,0.3); color: var(--text-muted); }
+
+        /* progress bar */
+        .bar-wrap { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+        .bar-track {
+            flex: 1; height: 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bar-green { background: linear-gradient(90deg, #22c55e, #34d399); }
+        .bar-yellow { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .bar-red { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .bar-pct {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* cache tag */
+        .cache-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .cache-hit { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+        .cache-miss { background: rgba(255,255,255,0.04); color: var(--text-muted); }
+
+        /* gecmis */
+        .history { margin-top: 48px; display: none; }
+        .history h2 { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; font-weight: 500; }
+        .h-list { display: flex; flex-direction: column; gap: 6px; }
+        .h-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-radius: 10px;
+            background: rgba(17,24,39,0.5);
+            border: 1px solid transparent;
+        }
+        .h-row:hover { border-color: var(--border-light); background: rgba(17,24,39,0.8); }
+        .h-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .h-domain { flex: 1; font-weight: 600; font-size: 0.88rem; font-family: 'JetBrains Mono', monospace; color: var(--primary); }
+        .h-cat { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; }
+        .h-decision {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 5px;
+        }
+        .hd-BLOCK { background: var(--danger-bg); color: var(--danger); }
+        .hd-WARN { background: var(--warn-bg); color: var(--warn); }
+        .hd-ALLOW { background: var(--safe-bg); color: var(--safe); }
+
+        /* footer */
+        .foot {
+            text-align: center;
+            margin-top: 56px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+            color: #4b5563;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 28px 12px 60px; }
+            h1 { font-size: 1.8rem; }
+            .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-val { font-size: 1.1rem; }
+            .search-box { flex-direction: column; }
+            .search-box button { padding: 14px; width: 100%; }
+            .metrics-grid { grid-template-columns: 1fr; }
+            .result-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>URL Guard AI</h1>
+        <p class="subtitle">AI Destekli Tehdit Analizi ve URL Filtreleme</p>
+    </header>
+
+    <div class="stats">
+        <div class="glass-panel stat-card">
+            <div class="stat-val" id="sTotal">0</div>
+            <div class="stat-lbl">Analiz Edilen</div>
+        </div>
+        <div class="glass-panel stat-card">
+            <div class="stat-val" id="sBlocked">0</div>
+            <div class="stat-lbl">Engellenen</div>
+        </div>
+        <div class="glass-panel stat-card">
+            <div class="stat-val" id="sCached">0</div>
+            <div class="stat-lbl">Cache Hit</div>
+        </div>
+    </div>
+
+    <div class="glass-panel search-box">
+        <input type="text" id="urlInput" placeholder="https://hedef-site.com" autocomplete="off" spellcheck="false" maxlength="2048" />
+        <button id="analyzeBtn" onclick="doAnalyze()">ANALIZ ET</button>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-msg" id="loadMsg">Baglanti kuruluyor...</div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="glass-panel result-card" id="resultCard">
+        <div class="result-header">
+            <span class="result-url" id="rUrl"></span>
+            <span class="badge" id="rBadge"><span class="dot"></span><span class="badge-txt"></span></span>
+        </div>
+        <div class="metrics-grid">
+            <div class="metric">
+                <div class="metric-label">Tehdit Kategorisi</div>
+                <div class="metric-value" id="rCat"></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Tespit Yontemi</div>
+                <div class="metric-value" id="rMethod"></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Guven Skoru</div>
+                <div class="metric-value">
+                    <div class="bar-wrap">
+                        <div class="bar-track"><div class="bar-fill" id="rConfBar"></div></div>
+                        <div class="bar-pct" id="rConfPct">--</div>
+                    </div>
+                </div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Risk Puani</div>
+                <div class="metric-value">
+                    <div class="bar-wrap">
+                        <div class="bar-track"><div class="bar-fill" id="rRiskBar"></div></div>
+                        <div class="bar-pct" id="rRiskPct">--</div>
+                    </div>
+                </div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Cache Durumu</div>
+                <div class="metric-value" id="rCache"></div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Ipucu</div>
+                <div class="metric-value" id="rHint" style="font-size:0.85rem; color:#94a3b8;">--</div>
+            </div>
+            <div class="metric full">
+                <div class="metric-label">Sistem Gerekcesi</div>
+                <div class="metric-value" id="rReason" style="font-family:'JetBrains Mono',monospace; font-size:0.88rem; color:#cbd5e1; line-height:1.6;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="history" id="historySection">
+        <h2>Son Taramalar</h2>
+        <div class="h-list" id="hList"></div>
+    </div>
+
+    <div class="foot">
+        URL GUARD AI v1.0 &middot; Abdulkadir Kuvetli
+    </div>
+</div>
+
+<script>
+// ========================================================
+// GUVENLIK: API key frontend'de gizlenemez (kaynak kodda gorunur).
+// Bu yuzden production'da iki yol var:
+// 1) API key'i kaldir, rate limiting ile koru (biz bunu yapiyoruz)
+// 2) Backend'e login sistemi ekle, session bazli erisim ver
+//
+// Su anki yaklasim: ayni origin'den gelen istekler icin
+// API key zorunlu ama key burada tutuluyor.
+// VPS'te nginx seviyesinde ek koruma ekleyecegiz.
+// ========================================================
+
+const API_KEY = "%%API_KEY%%"; // deploy scriptinde degistirilecek, yoksa .env'den
+
+// --- durum ---
+const hist = [];
+let totalC = 0, blockC = 0, cacheC = 0;
+let busy = false;
+
+// --- elemanlar ---
+const $ = id => document.getElementById(id);
+
+// enter ile calistir
+$("urlInput").addEventListener("keydown", e => { if (e.key === "Enter") doAnalyze(); });
+
+// --- loading mesajlari ---
+const msgs = [
+    "Baglanti kuruluyor...",
+    "Sayfa icerigi aliniyor...",
+    "Icerik analiz ediliyor...",
+    "Kategori belirleniyor...",
+    "Sonuc hazirlaniyor..."
+];
+
+// --- url dogrulama (guvenlik: sadece http/https kabul et) ---
+function validateUrl(raw) {
+    let url = raw.trim();
+    if (!url) return null;
+
+    // guvenlik: javascript:, data:, file: gibi tehlikeli semalari engelle
+    if (/^(javascript|data|file|ftp|blob):/i.test(url)) return null;
+
+    // https:// yoksa ekle
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+    // cok uzun url'leri reddet (dos koruması)
+    if (url.length > 2048) return null;
+
+    return url;
+}
+
+// --- xss koruması: textContent kullan, innerHTML KULLANMA ---
+function safeText(el, text) {
+    el.textContent = text || "--";
+}
+
+async function doAnalyze() {
+    if (busy) return;
+
+    const raw = $("urlInput").value;
+    const url = validateUrl(raw);
+
+    if (!url) {
+        $("errorBox").textContent = "Gecerli bir URL girin (https://ornek.com)";
+        $("errorBox").style.display = "block";
+        return;
+    }
+
+    $("urlInput").value = url;
+    busy = true;
+    $("resultCard").style.display = "none";
+    $("errorBox").style.display = "none";
+    $("loading").style.display = "block";
+    $("analyzeBtn").disabled = true;
+
+    // degisen loading mesajlari
+    let mi = 0;
+    safeText($("loadMsg"), msgs[0]);
+    const mt = setInterval(() => {
+        mi = (mi + 1) % msgs.length;
+        safeText($("loadMsg"), msgs[mi]);
+    }, 1600);
+
+    try {
+        const headers = { "Content-Type": "application/json" };
+
+        // api key varsa ekle (placeholder degilse)
+        if (API_KEY && API_KEY !== "%%API_KEY%%") {
+            headers["X-API-Key"] = API_KEY;
+        }
+
+        const res = await fetch("/analyze", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ url })
+        });
+
+        if (res.status === 429) throw new Error("Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
+        if (res.status === 403) throw new Error("API erisim yetkisi reddedildi.");
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Sunucu hatasi: " + res.status);
+        }
+
+        const d = await res.json();
+        renderResult(d);
+        addHist(d);
+        updateStats(d);
+
+    } catch (err) {
+        // guvenlik: hata mesajini sanitize et
+        safeText($("errorBox"), err.message);
+        $("errorBox").style.display = "block";
+    } finally {
+        clearInterval(mt);
+        $("loading").style.display = "none";
+        $("analyzeBtn").disabled = false;
+        busy = false;
+    }
+}
+
+function renderResult(d) {
+    // url (textContent ile xss koruması)
+    safeText($("rUrl"), d.url);
+
+    // badge
+    const badge = $("rBadge");
+    badge.className = "badge badge-" + (d.decision || "WARN");
+    badge.querySelector(".badge-txt").textContent = d.decision;
+
+    // kategori chip
+    const catMap = { gambling:"Kumar / Bahis", adult:"Yetiskin", social:"Sosyal Medya", safe:"Guvenli", unknown:"Bilinmiyor" };
+    const catClass = "cat-" + (d.category || "unknown");
+    $("rCat").innerHTML = "";
+    const chip = document.createElement("span");
+    chip.className = "cat-chip " + catClass;
+    chip.textContent = catMap[d.category] || d.category;
+    $("rCat").appendChild(chip);
+
+    // yontem
+    const methodMap = { keyword:"Kelime Filtresi", llm:"Yapay Zeka (LLM)", dns_check:"DNS Kontrolu", cache:"Onbellek", keyword_fallback:"Filtre (Yedek)", fetch_error:"Erisim Hatasi" };
+    safeText($("rMethod"), methodMap[d.method] || d.method);
+
+    // guven bar
+    const conf = d.confidence != null ? Math.round(d.confidence * 100) : 0;
+    const confBar = $("rConfBar");
+    confBar.style.width = "0%";
+    confBar.className = "bar-fill " + (conf >= 80 ? "bar-green" : conf >= 50 ? "bar-yellow" : "bar-red");
+    $("rConfPct").textContent = conf + "%";
+    setTimeout(() => { confBar.style.width = conf + "%"; }, 50);
+
+    // risk bar
+    const risk = d.risk_score != null ? Math.round(d.risk_score) : 0;
+    const riskBar = $("rRiskBar");
+    riskBar.style.width = "0%";
+    riskBar.className = "bar-fill " + (risk >= 70 ? "bar-red" : risk >= 40 ? "bar-yellow" : "bar-green");
+    $("rRiskPct").textContent = risk + "%";
+    setTimeout(() => { riskBar.style.width = risk + "%"; }, 50);
+
+    // cache
+    const cacheEl = $("rCache");
+    cacheEl.innerHTML = "";
+    const tag = document.createElement("span");
+    tag.className = "cache-tag " + (d.cached ? "cache-hit" : "cache-miss");
+    tag.textContent = d.cached ? "CACHED" : "YENi";
+    cacheEl.appendChild(tag);
+    const hitSpan = document.createElement("span");
+    hitSpan.style.cssText = "color:#6b7280; font-size:0.82rem; margin-left:8px;";
+    hitSpan.textContent = d.hit_count + " sorgu";
+    cacheEl.appendChild(hitSpan);
+
+    // hint & reason
+    safeText($("rHint"), d.keyword_hint);
+    safeText($("rReason"), d.reasoning ? "> " + d.reasoning : "--");
+
+    // animasyonu yeniden tetikle
+    $("resultCard").style.display = "none";
+    $("resultCard").offsetHeight;
+    $("resultCard").style.display = "block";
+}
+
+function updateStats(d) {
+    totalC++;
+    if (d.decision === "BLOCK") blockC++;
+    if (d.cached) cacheC++;
+    $("sTotal").textContent = totalC;
+    $("sBlocked").textContent = blockC;
+    $("sCached").textContent = cacheC;
+}
+
+function addHist(d) {
+    const i = hist.findIndex(h => h.url === d.url);
+    if (i !== -1) hist.splice(i, 1);
+    hist.unshift(d);
+    if (hist.length > 15) hist.pop();
+    renderHist();
+}
+
+function renderHist() {
+    const list = $("hList");
+    list.innerHTML = "";
+    hist.forEach(item => {
+        const dec = item.decision || "WARN";
+        const colors = { BLOCK: "var(--danger)", WARN: "var(--warn)", ALLOW: "var(--safe)" };
+
+        const row = document.createElement("div");
+        row.className = "h-row";
+        row.onclick = () => { $("urlInput").value = item.url; doAnalyze(); };
+
+        // dot
+        const dot = document.createElement("span");
+        dot.className = "h-dot";
+        dot.style.cssText = "background:" + colors[dec] + "; box-shadow:0 0 6px " + colors[dec] + ";";
+
+        // domain
+        const dom = document.createElement("span");
+        dom.className = "h-domain";
+        dom.textContent = item.domain || item.url;
+
+        // kategori
+        const cat = document.createElement("span");
+        cat.className = "h-cat";
+        cat.textContent = item.category;
+
+        // karar
+        const decision = document.createElement("span");
+        decision.className = "h-decision hd-" + dec;
+        decision.textContent = dec;
+
+        row.appendChild(dot);
+        row.appendChild(dom);
+        row.appendChild(cat);
+        row.appendChild(decision);
+        list.appendChild(row);
+    });
+    $("historySection").style.display = hist.length > 0 ? "block" : "none";
+}
+
+// sayfa yuklenince istatistikleri cek
+(async function() {
+    try {
+        const headers = {};
+        if (API_KEY && API_KEY !== "%%API_KEY%%") headers["X-API-Key"] = API_KEY;
+        const res = await fetch("/stats", { headers });
+        if (res.ok) {
+            const s = await res.json();
+            totalC = s.total_urls || 0;
+            blockC = s.decisions?.BLOCK || 0;
+            $("sTotal").textContent = totalC;
+            $("sBlocked").textContent = blockC;
+        }
+    } catch(e) {}
+})();
+</script>
+</body>
+</html>

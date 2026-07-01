@@ -18,6 +18,7 @@ CACHE_TTL_HOURS = int(os.getenv("CACHE_TTL_HOURS", "24"))
 
 
 def analyze_url(url: str, db: Session) -> dict:
+
     """
     ana akis fonksiyonu - url alir, tum adimlari sirayla isletir, sonuc doner.
     
@@ -34,7 +35,10 @@ def analyze_url(url: str, db: Session) -> dict:
     """
 
     # ---- 1. url temizle ve domain cikar ----
-        
+    
+    # http/https yoksa ekle
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
     # sondaki / ekle ki ayni sayfa farkli url gibi gorunmesin
     if not url.endswith("/"):
         url = url + "/"
