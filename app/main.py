@@ -14,6 +14,13 @@ from app.db import init_db, get_db, URLAnalysis
 from app.schemas import URLAnalyzeRequest, URLAnalyzeResponse, URLHistoryResponse, URLHistoryItem
 from app.analyzer import analyze_url
 
+import logging
+
+# guvenlik: hata loglarinda hassas bilgi gosterme
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
+
+
 load_dotenv()
 
 # .env'den api key'i al - bu olmadan uygulama baslamaz
@@ -105,14 +112,12 @@ async def analyze(
     db: Session = Depends(get_db),
     api_key: str = Depends(verify_api_key),
 ):
-    """
-    url analiz endpoint'i.
-    url alir, analiz eder, kategori ve karar doner.
-    cache varsa ve icerik degismemisse eski sonucu doner.
-    """
-    result = analyze_url(body.url, db)
-    return result
-
+    try:
+        result = analyze_url(body.url, db)
+        return result
+    except Exception as e:
+        logger.error(f"analiz hatasi: {e}")
+        raise HTTPException(status_code=500, detail="analiz sirasinda bir hata olustu")
 
 @app.get("/history/{url:path}", response_model=URLHistoryResponse)
 @limiter.limit("30/minute")
