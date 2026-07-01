@@ -453,7 +453,7 @@
 // VPS'te nginx seviyesinde ek koruma ekleyecegiz.
 // ========================================================
 
-const API_KEY = "%%API_KEY%%"; // deploy scriptinde degistirilecek, yoksa .env'den
+const API_KEY = null; // deploy scriptinde degistirilecek, yoksa .env'den
 
 // --- durum ---
 const hist = [];
@@ -682,8 +682,8 @@ function renderHist() {
 // sayfa yuklenince istatistikleri cek
 (async function() {
     try {
-        const headers = {};
-        if (API_KEY && API_KEY !== "%%API_KEY%%") headers["X-API-Key"] = API_KEY;
+        const headers = { "Content-Type": "application/json" };
+        if (API_KEY) headers["X-API-Key"] = API_KEY;
         const res = await fetch("/stats", { headers });
         if (res.ok) {
             const s = await res.json();

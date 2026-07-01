@@ -22,10 +22,12 @@ def extract_domain(url: str) -> str:
 def check_dns(domain: str) -> bool:
     """domain gercekten var mi? dns'te cozumlenebiliyor mu?"""
     try:
+        if not domain or len(domain) > 253:
+            return False
         socket.setdefaulttimeout(3.0)
         socket.getaddrinfo(domain, None)
         return True
-    except (socket.gaierror, socket.timeout):
+    except Exception:
         return False
 
 

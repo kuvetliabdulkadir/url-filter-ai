@@ -37,8 +37,26 @@ def analyze_url(url: str, db: Session) -> dict:
     # ---- 1. url temizle ve domain cikar ----
     
     # http/https yoksa ekle
-    if not url.startswith("http://") and not url.startswith("https://"):
-        url = "https://" + url
+    # url dogrulama ve temizleme
+  
+
+   # url temizleme
+    url = url.strip()
+    # protokol ve gereksiz karakterleri temizle, sadece domain+path kalsin
+    while url.lower().startswith(("http://", "https://", "ftp://")):
+        url = url.split("://", 1)[1]
+    # basta kalan / ve bosluk temizle
+    url = url.lstrip("/ ")
+    # bos kaldiysa hata don
+    if not url:
+        return {"id": 0, "url": "", "domain": "", "category": "unknown",
+                "decision": "WARN", "confidence": 0.0, "reasoning": "gecersiz url",
+                "method": "validation", "risk_score": 0, "keyword_hint": None,
+                "error_message": "gecersiz url", "llm_model": None,
+                "cached": False, "hit_count": 0, "analyzed_at": None}
+    # temiz https ekle
+    url = "https://" + url
+
     # sondaki / ekle ki ayni sayfa farkli url gibi gorunmesin
     if not url.endswith("/"):
         url = url + "/"

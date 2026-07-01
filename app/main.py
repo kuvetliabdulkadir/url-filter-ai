@@ -64,9 +64,27 @@ app.add_middleware(
 
 # ---- api key dogrulama ----
 
-def verify_api_key(x_api_key: str = Header(..., description="API erisim anahtari")):
-    """her istekte api key kontrolu yapar, yanlis veya eksikse 403 doner"""
-    if x_api_key != API_KEY:
+def verify_api_key(
+    request: Request,
+    x_api_key: str = Header(default=None),
+):
+    """
+    api key kontrolu:
+    - eger istek ayni origin'den geliyorsa (frontend) -> api key zorunlu degil
+    - disaridan gelen istekler (curl, postman) -> api key zorunlu
+    """
+    # referer veya origin ayni sunucudan geliyorsa key istemeden gecir
+    origin = request.headers.get("origin", "")
+    referer = request.headers.get("referer", "")
+    host = request.headers.get("host", "")
+
+    is_same_origin = host and (host in origin or host in referer)
+
+    if is_same_origin:
+        return "frontend"
+
+    # disaridan gelen istek -> api key zorunlu
+    if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="gecersiz api anahtari")
     return x_api_key
 
