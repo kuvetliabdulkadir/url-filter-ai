@@ -1,0 +1,21 @@
+url-filter-ai/
+├── app/
+│   ├── __init__.py
+│   ├── db.py              # PostgreSQL şema + cache mantığı
+│   ├── schemas.py          # Pydantic modelleri
+│   ├── fetcher.py          # Sayfa içeriği çekme + hash
+│   ├── prefilter.py        # Keyword/regex ön-filtre
+│   ├── llm_client.py       # Ollama entegrasyonu
+│   ├── analyzer.py         # Ana akış: cache → fetch → prefilter → LLM → karar
+│   └── main.py             # FastAPI endpoints
+├── alembic/                # DB migration
+├── static/
+│   └── index.html          # Basit arayüz
+├── tests/
+├── .env.example            # Şablon (GitHub'a gider)
+├── .gitignore              # .env, __pycache__ vs. (güvenlik)
+├── docker-compose.yml
+├── Dockerfile
+├── nginx.conf              # subdomain reverse proxy
+├── requirements.txt
+└── README.md
