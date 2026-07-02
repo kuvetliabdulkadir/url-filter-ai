@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # guvenlik: sadece ic agdan erisilebilir, disariya acik degil
+    expose:
+      - "5432"
+
+  app:
+    build: .
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    # sadece localhost'a ac, nginx arkasinda calisacak
+    ports:
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  pgdata:
