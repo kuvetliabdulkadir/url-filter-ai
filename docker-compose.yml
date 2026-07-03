@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   db:
     image: postgres:16
@@ -10,20 +8,35 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # guvenlik: sadece ic agdan erisilebilir, disariya acik degil
     expose:
       - "5432"
+    # Veritabanının hazır olup olmadığını kontrol eden mekanizma:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   app:
     build: .
     restart: always
+    # Sadece db tamamen sağlıklı (ready) olduğunda app çalışmaya başlar:
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - .env
-    # sadece localhost'a ac, nginx arkasinda calisacak
     ports:
       - "127.0.0.1:8000:8000"
-
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - internet_net
 volumes:
   pgdata:
+networks:
+  internet_net:
+    external: true
+    name: big-bear-n8n_default
+

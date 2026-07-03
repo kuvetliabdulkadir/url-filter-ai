@@ -101,7 +101,7 @@ def analyze_url(url: str, db: Session) -> dict:
             "confidence": domain_prefilter["confidence"],
             "reasoning": f"on-filtre ile tespit edildi: {domain_prefilter['keyword_hint']}",
             "method": "keyword",
-            "risk_score": 90.0 if domain_prefilter["decision"] == "BLOCK" else 50.0,
+            "risk_score": 90.0 if domain_prefilter["decision"] == "BLOCK" else 35.0,
             "keyword_hint": domain_prefilter["keyword_hint"],
             "error_message": None,
             "llm_model": None,
@@ -119,7 +119,7 @@ def analyze_url(url: str, db: Session) -> dict:
             "confidence": 0.0,
             "reasoning": f"sayfa icerigi cekilemedi: {page['error']}",
             "method": "fetch_error",
-            "risk_score": 50.0,
+            "risk_score": 20.0 if "404" in str(page["error"]) else 35.0,
             "keyword_hint": None,
             "error_message": page["error"],
             "llm_model": None,
@@ -155,7 +155,7 @@ def analyze_url(url: str, db: Session) -> dict:
             "confidence": prefilter["confidence"],
             "reasoning": f"on-filtre ile tespit edildi: {prefilter['keyword_hint']}",
             "method": "keyword",
-            "risk_score": 90.0 if prefilter["decision"] == "BLOCK" else 50.0,
+            "risk_score": 90.0 if prefilter["decision"] == "BLOCK" else 35.0,
             "keyword_hint": prefilter["keyword_hint"],
             "error_message": None,
             "llm_model": None,
@@ -167,7 +167,7 @@ def analyze_url(url: str, db: Session) -> dict:
     # ---- 7. llm analizi ----
     # on-filtre emin degilse veya hic eslesmemisse llm'e sor
     llm_result = classify_with_llm(url, page["text"])
-
+    
     # llm basarisiz olduysa ve on-filtre bir sey bulduysa, on-filtreye guven
     if not llm_result["success"] and prefilter["matched"]:
         result = _save_result(db, url, domain, {
@@ -176,7 +176,7 @@ def analyze_url(url: str, db: Session) -> dict:
             "confidence": prefilter["confidence"],
             "reasoning": f"llm basarisiz, on-filtre sonucu kullanildi: {prefilter['keyword_hint']}",
             "method": "keyword_fallback",
-            "risk_score": 80.0 if prefilter["decision"] == "BLOCK" else 40.0,
+            "risk_score": 80.0 if prefilter["decision"] == "BLOCK" else 35.0,
             "keyword_hint": prefilter["keyword_hint"],
             "error_message": llm_result["error"],
             "llm_model": None,
@@ -211,13 +211,13 @@ def _calculate_risk_score(category: str, confidence: float) -> float:
     base_scores = {
         "adult": 95.0,
         "gambling": 90.0,
-        "social": 40.0,
-        "safe": 10.0,
-        "unknown": 50.0,
+        "social": 35.0,
+        "safe": 5.0,
+        "unknown": 30.0,
     }
-    base = base_scores.get(category, 50.0)
-    # guven skoru dusukse risk puanini ortaya cek
-    return round(base * confidence + 50.0 * (1 - confidence), 1)
+    base = base_scores.get(category, 30.0)
+    # guven skoru yuksekse base'e yakin, dusukse 30'a ceker
+    return round(base * confidence + 30.0 * (1 - confidence), 1)
 
 
 def _save_result(db: Session, url: str, domain: str, data: dict) -> dict:

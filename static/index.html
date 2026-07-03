@@ -326,6 +326,150 @@
         .hd-WARN { background: var(--warn-bg); color: var(--warn); }
         .hd-ALLOW { background: var(--safe-bg); color: var(--safe); }
 
+        /* tum gecmis paneli */
+        .all-history { margin-top: 40px; }
+        .ah-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .ah-header h2 { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
+        .ah-toggle {
+            background: transparent;
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .ah-toggle:hover { border-color: var(--primary); color: var(--primary); }
+        .ah-panel { display: none; }
+        .ah-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .ah-filters select {
+            background: rgba(17,24,39,0.6);
+            border: 1px solid var(--border-light);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+        .ah-filters select:focus { border-color: var(--primary); }
+        .ah-bulk-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: rgba(56,189,248,0.08);
+            border: 1px solid rgba(56,189,248,0.25);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 0.82rem;
+        }
+        .ah-bulk-bar button {
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .ah-bulk-bar button:hover { opacity: 0.85; }
+        .ah-list { display: flex; flex-direction: column; gap: 6px; }
+        .ah-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: rgba(17,24,39,0.5);
+            border: 1px solid transparent;
+            transition: var(--transition);
+        }
+        .ah-row:hover { border-color: var(--border-light); background: rgba(17,24,39,0.8); }
+        .ah-row input[type="checkbox"] {
+            width: 16px; height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .ah-row .ah-main { flex: 1; min-width: 0; cursor: pointer; }
+        .ah-row .ah-url {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ah-row .ah-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+        .ah-row .ah-del {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+        .ah-row .ah-del:hover { color: var(--danger); background: var(--danger-bg); }
+        .ah-empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 0.88rem; }
+        .ah-loadmore {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        .ah-loadmore:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* detay modal */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-box {
+            max-width: 560px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.3rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--text-main); }
+
         /* footer */
         .foot {
             text-align: center;
@@ -437,6 +581,59 @@
         <div class="h-list" id="hList"></div>
     </div>
 
+    <div class="all-history glass-panel" style="padding:24px;">
+        <div class="ah-header">
+            <h2>Tum Taramalar</h2>
+            <button class="ah-toggle" id="ahToggleBtn" onclick="toggleAllHistory()">Goster / Gizle</button>
+        </div>
+        <div class="ah-panel" id="ahPanel">
+            <div class="ah-filters">
+                <select id="ahCatFilter" onchange="reloadAllHistory(true)">
+                    <option value="">Tum Kategoriler</option>
+                    <option value="gambling">Kumar / Bahis</option>
+                    <option value="adult">Yetiskin</option>
+                    <option value="social">Sosyal Medya</option>
+                    <option value="safe">Guvenli</option>
+                    <option value="unknown">Bilinmiyor</option>
+                </select>
+                <select id="ahDecFilter" onchange="reloadAllHistory(true)">
+                    <option value="">Tum Kararlar</option>
+                    <option value="ALLOW">ALLOW</option>
+                    <option value="WARN">WARN</option>
+                    <option value="BLOCK">BLOCK</option>
+                </select>
+                <button class="ah-toggle" onclick="reloadAllHistory(true)">Yenile</button>
+            </div>
+            <div class="ah-bulk-bar" id="ahBulkBar">
+                <span id="ahBulkCount">0 secildi</span>
+                <button onclick="bulkDeleteSelected()">Secilenleri Sil</button>
+            </div>
+            <div class="ah-list" id="ahList"></div>
+            <div class="ah-empty" id="ahEmpty" style="display:none;">Kayit bulunamadi.</div>
+            <button class="ah-loadmore" id="ahLoadMoreBtn" onclick="loadMoreHistory()" style="display:none;">Daha Fazla Yukle</button>
+        </div>
+    </div>
+
+  	<!-- confirm modal -->
+	<div class="modal-overlay" id="confirmOverlay" style="display:none">
+    <div class="glass-panel modal-box" style="position:relative;padding:28px 32px;max-width:360px;text-align:center">
+        <div style="font-size:2rem;margin-bottom:12px">🗑️</div>
+        <div id="confirmMessage" style="font-size:1rem;color:var(--text-main);margin-bottom:24px;line-height:1.5"></div>
+        <div style="display:flex;gap:12px;justify-content:center">
+            <button onclick="confirmResolve(false)" style="padding:9px 28px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-sub);cursor:pointer;font-size:0.9rem">İptal</button>
+            <button onclick="confirmResolve(true)" style="padding:9px 28px;border-radius:8px;border:none;background:#e74c3c;color:#fff;cursor:pointer;font-size:0.9rem;font-weight:600">Sil</button>
+        </div>
+    	</div>
+      
+	</div>
+  
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+        <div class="glass-panel modal-box" id="modalBox" style="position:relative; padding:26px 28px;">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
     <div class="foot">
         URL GUARD AI v1.0 &middot; Abdulkadir Kuvetli
     </div>
@@ -454,12 +651,18 @@
 // VPS'te nginx seviyesinde ek koruma ekleyecegiz.
 // ========================================================
 
-const API_KEY = null; // deploy scriptinde degistirilecek, yoksa .env'den
+const API_KEY = "frontend-read-2025"; // public read token - sadece GET icin
 
 // --- durum ---
 const hist = [];
 let totalC = 0, blockC = 0, cacheC = 0;
 let busy = false;
+
+// tum gecmis paneli durumu
+let ahOffset = 0;
+const AH_PAGE_SIZE = 20;
+let ahSelected = new Set();
+let ahVisible = false;
 
 // --- elemanlar ---
 const $ = id => document.getElementById(id);
@@ -498,6 +701,12 @@ function safeText(el, text) {
     el.textContent = text || "--";
 }
 
+function apiHeaders() {
+    const headers = { "Content-Type": "application/json" };
+    if (API_KEY && API_KEY !== "%%API_KEY%%") headers["X-API-Key"] = API_KEY;
+    return headers;
+}
+
 async function doAnalyze() {
     if (busy) return;
 
@@ -526,16 +735,9 @@ async function doAnalyze() {
     }, 1600);
 
     try {
-        const headers = { "Content-Type": "application/json" };
-
-        // api key varsa ekle (placeholder degilse)
-        if (API_KEY && API_KEY !== "%%API_KEY%%") {
-            headers["X-API-Key"] = API_KEY;
-        }
-
         const res = await fetch("/analyze", {
             method: "POST",
-            headers,
+            headers: apiHeaders(),
             body: JSON.stringify({ url })
         });
 
@@ -550,6 +752,8 @@ async function doAnalyze() {
         renderResult(d);
         addHist(d);
         updateStats(d);
+        // tum gecmis paneli aciksa tazele
+        if (ahVisible) reloadAllHistory(true);
 
     } catch (err) {
         // guvenlik: hata mesajini sanitize et
@@ -680,12 +884,214 @@ function renderHist() {
     $("historySection").style.display = hist.length > 0 ? "block" : "none";
 }
 
+// ========================================================
+// TUM GECMIS PANELI
+// ========================================================
+
+const catMapAH = { gambling:"Kumar / Bahis", adult:"Yetiskin", social:"Sosyal Medya", safe:"Guvenli", unknown:"Bilinmiyor" };
+const methodMapAH = { keyword:"Kelime Filtresi", llm:"Yapay Zeka (LLM)", dns_check:"DNS Kontrolu", cache:"Onbellek", keyword_fallback:"Filtre (Yedek)", fetch_error:"Erisim Hatasi", validation:"Dogrulama" };
+
+function toggleAllHistory() {
+    ahVisible = !ahVisible;
+    $("ahPanel").style.display = ahVisible ? "block" : "none";
+    if (ahVisible && $("ahList").children.length === 0) {
+        reloadAllHistory(true);
+    }
+}
+
+async function reloadAllHistory(reset) {
+    if (reset) {
+        ahOffset = 0;
+        ahSelected.clear();
+        updateBulkBar();
+        $("ahList").innerHTML = "";
+    }
+    const cat = $("ahCatFilter").value;
+    const dec = $("ahDecFilter").value;
+
+    try {
+        const params = new URLSearchParams();
+        if (cat) params.set("category", cat);
+        if (dec) params.set("decision", dec);
+        params.set("limit", AH_PAGE_SIZE);
+        params.set("offset", ahOffset);
+
+        const res = await fetch("/list?" + params.toString(), { headers: apiHeaders() });
+        if (!res.ok) throw new Error("liste alinamadi");
+        const data = await res.json();
+
+        renderAllHistory(data.items, reset);
+
+        ahOffset += data.items.length;
+        const hasMore = ahOffset < data.total;
+        $("ahLoadMoreBtn").style.display = hasMore ? "block" : "none";
+        $("ahEmpty").style.display = (reset && data.items.length === 0) ? "block" : "none";
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function loadMoreHistory() {
+    reloadAllHistory(false);
+}
+
+function renderAllHistory(items, reset) {
+    const list = $("ahList");
+    if (reset) list.innerHTML = "";
+
+    const colors = { BLOCK: "var(--danger)", WARN: "var(--warn)", ALLOW: "var(--safe)" };
+
+    items.forEach(item => {
+        const dec = item.decision || "WARN";
+
+        const row = document.createElement("div");
+        row.className = "ah-row";
+
+        // checkbox
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = ahSelected.has(item.id);
+        cb.onchange = () => {
+            if (cb.checked) ahSelected.add(item.id); else ahSelected.delete(item.id);
+            updateBulkBar();
+        };
+
+        // ana blok (tiklaninca detay modal)
+        const main = document.createElement("div");
+        main.className = "ah-main";
+        main.onclick = () => openDetailModal(item);
+
+        const urlLine = document.createElement("div");
+        urlLine.className = "ah-url";
+        urlLine.textContent = item.url;
+
+        const metaLine = document.createElement("div");
+        metaLine.className = "ah-meta";
+        const dt = item.analyzed_at ? new Date(item.analyzed_at).toLocaleString("tr-TR") : "";
+        metaLine.textContent = (catMapAH[item.category] || item.category) + " • " + dt + " • " + item.hit_count + " sorgu";
+
+        main.appendChild(urlLine);
+        main.appendChild(metaLine);
+
+        // karar rozeti
+        const decision = document.createElement("span");
+        decision.className = "h-decision hd-" + dec;
+        decision.style.flexShrink = "0";
+        decision.textContent = dec;
+
+        // sil butonu
+        const delBtn = document.createElement("button");
+        delBtn.className = "ah-del";
+        delBtn.textContent = "✕";
+        delBtn.title = "Bu kaydi sil";
+        delBtn.onclick = (e) => { e.stopPropagation(); deleteSingle(item.id); };
+
+        row.appendChild(cb);
+        row.appendChild(main);
+        row.appendChild(decision);
+        row.appendChild(delBtn);
+        list.appendChild(row);
+    });
+}
+
+function updateBulkBar() {
+    const n = ahSelected.size;
+    $("ahBulkBar").style.display = n > 0 ? "flex" : "none";
+    $("ahBulkCount").textContent = n + " secildi";
+}
+
+async function deleteSingle(id) {
+    if (!await showConfirm("Bu kaydı silmek istediğinize<br>emin misiniz?")) return;
+    try {
+        const res = await fetch("/list/" + id, { method: "DELETE", headers: apiHeaders() });
+        if (!res.ok) throw new Error("silinemedi");
+        ahSelected.delete(id);
+        updateBulkBar();
+        reloadAllHistory(true);
+    } catch (e) {
+        alert("Kayit silinirken hata olustu.");
+    }
+}
+
+async function bulkDeleteSelected() {
+    if (ahSelected.size === 0) return;
+    if (!await showConfirm(ahSelected.size + " kaydı silmek istediğinize<br>emin misiniz?")) return;
+    try {
+        const res = await fetch("/list/bulk-delete", {
+            method: "POST",
+            headers: apiHeaders(),
+            body: JSON.stringify({ ids: Array.from(ahSelected) }),
+        });
+        if (!res.ok) throw new Error("silinemedi");
+        ahSelected.clear();
+        updateBulkBar();
+        reloadAllHistory(true);
+    } catch (e) {
+        alert("Kayitlar silinirken hata olustu.");
+    }
+}
+
+// --- detay modal ---
+function openDetailModal(item) {
+    const conf = item.confidence != null ? Math.round(item.confidence * 100) : 0;
+    const risk = item.risk_score != null ? Math.round(item.risk_score) : 0;
+    const dec = item.decision || "WARN";
+    const dt = item.analyzed_at ? new Date(item.analyzed_at).toLocaleString("tr-TR") : "--";
+
+    const box = $("modalContent");
+    box.innerHTML = "";
+
+    const addRow = (label, value) => {
+        const wrap = document.createElement("div");
+        wrap.style.marginBottom = "16px";
+        const lbl = document.createElement("div");
+        lbl.className = "metric-label";
+        lbl.textContent = label;
+        const val = document.createElement("div");
+        val.className = "metric-value";
+        val.style.wordBreak = "break-word";
+        val.textContent = value || "--";
+        wrap.appendChild(lbl);
+        wrap.appendChild(val);
+        box.appendChild(wrap);
+    };
+
+    const badgeWrap = document.createElement("div");
+    badgeWrap.style.marginBottom = "18px";
+    const badge = document.createElement("span");
+    badge.className = "badge badge-" + dec;
+    badge.innerHTML = '<span class="dot"></span><span class="badge-txt">' + dec + "</span>";
+    badgeWrap.appendChild(badge);
+    box.appendChild(badgeWrap);
+
+    addRow("URL", item.url);
+    addRow("Domain", item.domain);
+    addRow("Kategori", catMapAH[item.category] || item.category);
+    addRow("Tespit Yontemi", methodMapAH[item.method] || item.method);
+    addRow("Guven Skoru", conf + "%");
+    addRow("Risk Puani", risk + "%");
+    addRow("Ipucu", item.keyword_hint);
+    addRow("LLM Modeli", item.llm_model);
+    addRow("Hata Mesaji", item.error_message);
+    addRow("Sorgu Sayisi", String(item.hit_count));
+    addRow("Son Analiz Tarihi", dt);
+    addRow("Sistem Gerekcesi", item.reasoning);
+
+    $("modalOverlay").style.display = "flex";
+}
+
+function closeModal() {
+    $("modalOverlay").style.display = "none";
+}
+
+function closeModalOnOverlay(e) {
+    if (e.target.id === "modalOverlay") closeModal();
+}
+
 // sayfa yuklenince istatistikleri cek
 (async function() {
     try {
-        const headers = { "Content-Type": "application/json" };
-        if (API_KEY) headers["X-API-Key"] = API_KEY;
-        const res = await fetch("/stats", { headers });
+        const res = await fetch("/stats", { headers: apiHeaders() });
         if (res.ok) {
             const s = await res.json();
             totalC = s.total_urls || 0;
@@ -695,6 +1101,17 @@ function renderHist() {
         }
     } catch(e) {}
 })();
+  // --- custom confirm ---
+let _confirmResolve = null;
+function showConfirm(msg) {
+    $("confirmMessage").innerHTML = msg;
+    $("confirmOverlay").style.display = "flex";
+    return new Promise(res => _confirmResolve = res);
+}
+function confirmResolve(val) {
+    $("confirmOverlay").style.display = "none";
+    if (_confirmResolve) { _confirmResolve(val); _confirmResolve = null; }
+}
 </script>
 </body>
 </html>

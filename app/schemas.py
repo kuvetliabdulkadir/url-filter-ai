@@ -62,3 +62,38 @@ class URLHistoryResponse(BaseModel):
     current_decision: str
     total_analyses: int
     history: List[URLHistoryItem]
+
+class URLListItem(BaseModel):
+    """gecmis listesinde gosterilecek tek satir"""
+    id: int
+    url: str
+    domain: Optional[str] = None
+    category: str
+    decision: str
+    confidence: Optional[float] = None
+    reasoning: Optional[str] = None
+    method: str
+    risk_score: Optional[float] = None
+    keyword_hint: Optional[str] = None
+    error_message: Optional[str] = None
+    llm_model: Optional[str] = None
+    hit_count: int = 1
+    analyzed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class URLListResponse(BaseModel):
+    """filtrelenebilir, sayfalanabilir tam liste"""
+    total: int
+    items: List[URLListItem]
+
+
+class BulkDeleteRequest(BaseModel):
+    """secilen id'leri toplu silmek icin"""
+    ids: List[int] = Field(..., description="silinecek kayit id'leri")
+
+
+class BulkDeleteResponse(BaseModel):
+    deleted_count: int
+    deleted_ids: List[int]

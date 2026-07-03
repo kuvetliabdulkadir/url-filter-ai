@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Request, Header
+from typing import Optional
+from fastapi import FastAPI, Depends, HTTPException, Request, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter
@@ -11,7 +12,10 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
 from app.db import init_db, get_db, URLAnalysis
-from app.schemas import URLAnalyzeRequest, URLAnalyzeResponse, URLHistoryResponse, URLHistoryItem
+from app.schemas import (
+    URLAnalyzeRequest, URLAnalyzeResponse, URLHistoryResponse, URLHistoryItem,
+    URLListResponse, URLListItem, BulkDeleteRequest, BulkDeleteResponse,
+)
 from app.analyzer import analyze_url
 
 import logging
@@ -75,27 +79,23 @@ def verify_api_key(
     request: Request,
     x_api_key: str = Header(default=None),
 ):
-    """
-    api key kontrolu:
-    - eger istek ayni origin'den geliyorsa (frontend) -> api key zorunlu degil
-    - disaridan gelen istekler (curl, postman) -> api key zorunlu
-    """
-    # referer veya origin ayni sunucudan geliyorsa key istemeden gecir
+    # POST isteklerinde origin gelir, same-origin kontrolu calısır
     origin = request.headers.get("origin", "")
     referer = request.headers.get("referer", "")
     host = request.headers.get("host", "")
-
     is_same_origin = host and (host in origin or host in referer)
-
     if is_same_origin:
         return "frontend"
 
-    # disaridan gelen istek -> api key zorunlu
+    # GET isteklerinde tarayici origin/referer gondermez
+    # bu yuzden public read token ile de izin ver
+    PUBLIC_READ_TOKEN = os.getenv("PUBLIC_READ_TOKEN", "")
+    if PUBLIC_READ_TOKEN and x_api_key == PUBLIC_READ_TOKEN:
+        return "public-read"
+
     if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="gecersiz api anahtari")
     return x_api_key
-
-
 # ---- endpoint'ler ----
 
 @app.get("/health")
@@ -139,6 +139,74 @@ async def get_history(
         total_analyses=len(record.history),
         history=[URLHistoryItem.model_validate(h) for h in record.history],
     )
+
+
+@app.get("/list", response_model=URLListResponse)
+@limiter.limit("30/minute")
+async def list_history(
+    request: Request,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
+    category: Optional[str] = Query(default=None),
+    decision: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    """tum taramalarin filtrelenebilir, sayfalanabilir listesi"""
+    q = db.query(URLAnalysis)
+    if category:
+        q = q.filter(URLAnalysis.category == category)
+    if decision:
+        q = q.filter(URLAnalysis.decision == decision)
+
+    total = q.count()
+    items = (
+        q.order_by(URLAnalysis.analyzed_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return URLListResponse(
+        total=total,
+        items=[URLListItem.model_validate(i) for i in items],
+    )
+
+
+@app.delete("/list/{record_id}")
+@limiter.limit("30/minute")
+async def delete_record(
+    request: Request,
+    record_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
+):
+    """tek bir kaydi siler"""
+    record = db.query(URLAnalysis).filter(URLAnalysis.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="kayit bulunamadi")
+    db.delete(record)
+    db.commit()
+    return {"deleted": True, "id": record_id}
+
+
+@app.post("/list/bulk-delete", response_model=BulkDeleteResponse)
+@limiter.limit("10/minute")
+async def bulk_delete(
+    request: Request,
+    body: BulkDeleteRequest,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
+):
+    """secilen id'leri toplu siler"""
+    if not body.ids:
+        return BulkDeleteResponse(deleted_count=0, deleted_ids=[])
+
+    records = db.query(URLAnalysis).filter(URLAnalysis.id.in_(body.ids)).all()
+    deleted_ids = [r.id for r in records]
+    for r in records:
+        db.delete(r)
+    db.commit()
+    return BulkDeleteResponse(deleted_count=len(deleted_ids), deleted_ids=deleted_ids)
 
 
 @app.get("/stats")

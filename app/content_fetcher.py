@@ -2,6 +2,9 @@ import os
 import socket
 import httpx
 import tldextract
+# internetten guncel liste cekmeye calismasin diye paket icindeki
+# hazir (offline) suffix listesini kullaniyoruz, cache'e de yazma
+_tld_extractor = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,7 +16,7 @@ MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", "500"))
 
 def extract_domain(url: str) -> str:
     """url'den ana domain'i cikarir: https://www.bet365.co.uk/sports -> bet365.co.uk"""
-    ext = tldextract.extract(url)
+    ext = _tld_extractor(url)
     if ext.suffix:
         return f"{ext.domain}.{ext.suffix}"
     return ext.domain

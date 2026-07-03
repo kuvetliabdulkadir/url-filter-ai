@@ -31,10 +31,11 @@ Kurallar:
    - gambling -> BLOCK
    - adult -> BLOCK
 4. Guven skoru 0.0 ile 1.0 arasi olmali
-5. Kisa bir gerekce yaz (1-2 cumle)
+5. "reasoning" alani MUTLAKA TURKCE olmali, baska dil YASAK
+6. Kisa bir gerekce yaz (1-2 cumle, Turkce)
 
 SADECE asagidaki JSON formatinda cevap ver, baska hicbir sey yazma:
-{"category": "...", "decision": "...", "confidence": 0.0, "reasoning": "..."}"""
+{"category": "...", "decision": "...", "confidence": 0.0, "reasoning": "Turkce aciklama"}"""
 
 
 def classify_with_llm(url: str, text: str) -> dict:
