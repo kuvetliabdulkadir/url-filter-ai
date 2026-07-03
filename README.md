@@ -317,11 +317,6 @@ Kısa versiyon:
 4. Nginx reverse proxy — `localhost:8000` → `url.example.com`
 5. **Let's Encrypt için Cloudflare proxy'yi geçici kapat**, `certbot --nginx -d url.example.com`
 6. Sertifika alınınca Cloudflare proxy'yi tekrar aç
-7. Docker container'ı internete çıkabilmesi için bir bridge network'e bağla:
-   ```bash
-   docker network connect big-bear-n8n_default url-filter-ai-app-1
-   ```
-
 
 ---
 
