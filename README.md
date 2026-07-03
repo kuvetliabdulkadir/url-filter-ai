@@ -341,3 +341,13 @@ url-filter-ai/
 └── README.md
 ```
 
+
+## Planlanan Geliştirmeler
+
+- **Çok faktörlü güven skoru** — SSL sertifikası, domain yaşı (WHOIS), Tranco Top 1M kontrolü, LLM/prefilter tutarlılığı gibi ölçülebilir sinyallerden hesaplanan şeffaf skor
+- **Headless browser desteği** — JavaScript ile render edilen SPA sitelerin (React/Vue) içeriğini çekmek için Playwright entegrasyonu
+- **CSV/JSON export** — analiz geçmişini dışa aktarma
+- **Kullanıcı yönetimi** — çoklu kullanıcı, kendi geçmişini görme
+- **Bulk analiz** — tek seferde birden fazla URL analizi
+- **Detaylı istatistik paneli** — grafik, kategori dağılımı, zaman içinde trend
+- **Webhook desteği** — BLOCK kararlarında dış sistemlere bildirim
